@@ -7,6 +7,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -14,7 +15,11 @@ import javafx.stage.Stage;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import javafx.scene.control.Button;
 
@@ -22,25 +27,50 @@ public class Main extends Application {
 
     private static final Font FONT = Font.font(18);
 
+    private List<Question> questions;
     private QuestionPane qPane = new QuestionPane();
     private SidePane sPane = new SidePane();
+    private static Random r = new Random();
 
     private Parent createContent() {
         HBox root = new HBox(50);
         root.setPadding(new Insets(50, 50, 50, 50));
 
-        qPane.setQuestion(new Question("What sort of animal is Walt Disney's Dumbo?",
-                "Elephant", "Deer", "Donkey", "Rabbit"));
+        try {
+            qPane.setQuestion(selectRandomQuestion());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         root.getChildren().addAll(qPane, sPane);
         return root;
     }
 
     private void nextQuestion() {
-        qPane.setQuestion(new Question("Which battles took place between " +
-                "the Royal Houses of York and Lancaster?", "War of the Roses",
-                "Hundred Years War", "Thirty Years War", "English Civil War"));
+        try {
+            qPane.setQuestion(selectRandomQuestion());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         sPane.selectNext();
+    }
+
+    private List<Question> availableQuestions() {
+        return questions.stream().filter(Question::isAvailable).collect(Collectors.toList());
+    }
+
+    private Question selectRandomQuestion() throws Exception {
+        if (availableQuestions().size() == 0) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Congratulations!");
+            alert.setContentText("You win!");
+            alert.setHeaderText(null);
+            alert.show();
+            throw new Exception("We are out of questions.");
+        }
+        Question q = availableQuestions().get(r.nextInt(availableQuestions().size()));
+        q.setAvailable(false);
+        return q;
     }
 
     private class SidePane extends VBox {
@@ -88,7 +118,7 @@ public class Main extends Application {
                         nextQuestion();
                     }
                     else {
-                            System.out.println("Incorrect");
+                        System.out.println("Incorrect");
                     }
                 });
 
@@ -104,9 +134,19 @@ public class Main extends Application {
             current = question;
             text.setText(question.name);
 
-            Collections.shuffle(buttons);
-            for (int i = 0; i < 4; i++) {
-                buttons.get(i).setText(question.answers.get(i));
+            List<String> answers = new LinkedList<>(question.answers);
+
+            Collections.shuffle(answers);
+
+            for (int i = 0; i < answers.size(); i++) {
+                buttons.get(i).setText(answers.get(i));
+                buttons.get(i).setManaged(true);
+                buttons.get(i).setVisible(true);
+            }
+
+            for (int i = answers.size(); i < buttons.size(); i++) {
+                buttons.get(i).setManaged(false);
+                buttons.get(i).setVisible(false);
             }
         }
     }
@@ -114,6 +154,7 @@ public class Main extends Application {
     private class Question {
         private String name;
         private List<String> answers;
+        private boolean available = true;
 
         public Question(String name, String... answers) {
             this.name = name;
@@ -124,12 +165,33 @@ public class Main extends Application {
             return answers.get(0);
         }
 
+        public boolean isAvailable() {
+            return available;
+        }
+
+        public void setAvailable(boolean available) {
+            this.available = available;
+        }
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception{
+        questions = new LinkedList<>();
+        loadQuestions();
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
+    }
+
+    private void loadQuestions() throws FileNotFoundException {
+        System.out.println(Paths.get("").toAbsolutePath().toString());
+
+        File file = new File("C:\\Users\\malik\\OneDrive\\Desktop\\Millionaire Game\\q&a.txt");
+
+        Scanner scanner = new Scanner(file);
+        while (scanner.hasNext()) {
+            questions.add(new Question(scanner.nextLine(), scanner.nextLine(), scanner.nextLine(), scanner.nextLine(), scanner.nextLine()));
+            scanner.nextLine();
+        }
     }
 
 
