@@ -1,4 +1,5 @@
 A simple quiz-game based on JavaFX
+
 First, clone repository https://github.com/luianqi/JavaFX-Project.git and download txt file with questions stored there
 Then run the game and the window shows up as it is on the first screenshot
 1) Answer the question
